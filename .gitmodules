@@ -1,3 +1,6 @@
 [submodule "td"]
 	path = td
 	url = git@github.com:tdlib/td.git
+[submodule "wxWidgets"]
+	path = wxWidgets
+	url = git@github.com:wxWidgets/wxWidgets.git
