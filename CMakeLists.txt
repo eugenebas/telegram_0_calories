@@ -4,6 +4,8 @@ project(telegram_0_calories VERSION 0.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(TD_ENABLE_JNI OFF CACHE BOOL "turn off java api" FORCE)
+set(TD_ENABLE_DOTNET OFF CACHE BOOL "turn off C# api" FORCE)
 add_subdirectory(td)
 
 option(TZC_USE_SYSTEM_WXWIDGETS "Use system wxWidgets" ON)
@@ -21,8 +23,8 @@ else()
 endif()
 
 
-add_executable(${CMAKE_PROJECT_NAME} main.cpp login_window.hpp login_window.cpp pass_code_window.hpp pass_code_window.cpp password_window.hpp password_window.cpp)
+add_executable(${CMAKE_PROJECT_NAME} main.cpp login_window.hpp login_window.cpp pass_code_window.hpp pass_code_window.cpp password_window.hpp password_window.cpp tg_io.cpp tg_io.hpp show_login_window_event.hpp show_login_window_event.cpp)
 add_compile_definitions(${wxWidgets_DEFINITIONS})
 include_directories(${wxWidgets_INCLUDE_DIRS})
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${wxWidgets_LIBRARY_DIRS})
-target_link_libraries(${CMAKE_PROJECT_NAME} ${wxWidgets_LIBRARIES})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${wxWidgets_LIBRARIES} tdclient)
