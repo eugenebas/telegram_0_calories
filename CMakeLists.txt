@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
 project(telegram_0_calories VERSION 0.0.0 LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(TD_ENABLE_JNI OFF CACHE BOOL "turn off java api" FORCE)
 set(TD_ENABLE_DOTNET OFF CACHE BOOL "turn off C# api" FORCE)
@@ -22,6 +20,8 @@ else()
 	add_subdirectory(wxWidgets)
 endif()
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(${CMAKE_PROJECT_NAME} main.cpp login_window.hpp login_window.cpp pass_code_window.hpp pass_code_window.cpp password_window.hpp password_window.cpp tg_io.cpp tg_io.hpp show_login_window_event.hpp show_login_window_event.cpp)
 add_compile_definitions(${wxWidgets_DEFINITIONS})
