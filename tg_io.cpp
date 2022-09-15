@@ -1,17 +1,39 @@
 #include "td/telegram/Client.h"
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <wx/wx.h>
 #include "show_login_window_event.hpp"
+#include "queued_executor.hpp"
 
-static int64_t requestId = 0;
+template <typename FutureResult>
+class AwaitFutureTask final: public ITask {
+public:
+    AwaitFutureTask(std::future<FutureResult>&& toWait, std::function<void(FutureResult&& result)> toExecuteAfter):
+        mFuture(std::move(toWait)), mCallback(toExecuteAfter){
+    }
+    TaskExecutionResult execute() override {
+        if(!mFuture.valid()) return TaskExecutionResult::Done;
+        if(mFuture.wait_for(std::chrono::seconds(0)) == std::future_status::timeout) return TaskExecutionResult::Resubmit;
+        try {
+            mCallback(std::move(mFuture.get()));
+        } catch(...) {
+            std::cerr << "Failed to handle future" << std::endl;
+        }
+    }
+private:
+    std::future<FutureResult> mFuture;
+    std::function<void(FutureResult&& result)> mCallback;
+};
+
+static std::atomic<int64_t> requestId = 0;
 static int32_t clientId = 0;
-static std::unique_ptr<td::ClientManager> clientManager;
+static std::shared_ptr<td::ClientManager> clientManager;
 
 #define PRINT const {std::cout << __PRETTY_FUNCTION__ << std::endl;}
 
 struct AuthorizationStateHandler {
-    AuthorizationStateHandler(wxApp* application): mApplication(application){}
+    AuthorizationStateHandler(wxApp* application, std::shared_ptr<QueuedExecutor> executor): mApplication(application), mExecutor(executor){}
     void operator() (td::td_api::authorizationStateWaitTdlibParameters& state) const {
         auto parameters = td::td_api::make_object<td::td_api::tdlibParameters>();
         parameters->database_directory_ = "tdlib";
@@ -33,18 +55,12 @@ struct AuthorizationStateHandler {
         {std::cout << __PRETTY_FUNCTION__ << std::endl;}
         std::shared_ptr<std::promise<std::string>> loginPromise = std::make_shared<std::promise<std::string>>();
         std::future<std::string> loginFuture = loginPromise->get_future();
-
         mApplication->QueueEvent(new ShowLoginWindowEvent(loginPromise));
-
-        std::string login;
-        while(login.empty()) {
-            try {
-                login = loginFuture.get();
-                std::cout << login << std::endl;
-            } catch(...) {
-            }
-        }
-        clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(login, nullptr));
+        mExecutor->submit(std::make_shared<AwaitFutureTask<std::string>>(std::move(loginFuture), [&clientManager, &clientId, &requestId](std::string&& futureResult){
+            std::string login(std::move(futureResult));
+            std::cout << "login: " << login << std::endl;
+            clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(login, nullptr));
+        }));
     }
     void operator() (td::td_api::authorizationStateWaitCode& state) PRINT
     void operator() (td::td_api::authorizationStateWaitOtherDeviceConfirmation& state) PRINT
@@ -56,10 +72,11 @@ struct AuthorizationStateHandler {
     void operator() (td::td_api::authorizationStateClosed& state) PRINT
 
     wxApp* mApplication;
+    std::shared_ptr<QueuedExecutor> mExecutor;
 };
 
 struct ResponseHandler {
-    ResponseHandler(wxApp* application) : mApplication(application){}
+    ResponseHandler(wxApp* application, std::shared_ptr<QueuedExecutor> executor) : mApplication(application), mExecutor(executor){}
     void operator() (td::td_api::accountTtl& object) PRINT
     void operator() (td::td_api::address& object) PRINT
     void operator() (td::td_api::animatedChatPhoto& object) PRINT
@@ -879,7 +896,7 @@ struct ResponseHandler {
     void operator() (td::td_api::topChatCategoryForwardChats& object) PRINT
     void operator() (td::td_api::updateAuthorizationState& object) const {
         std::cout << __PRETTY_FUNCTION__ << std::endl;
-        td::td_api::downcast_call(*object.authorization_state_, AuthorizationStateHandler(mApplication));
+        td::td_api::downcast_call(*object.authorization_state_, AuthorizationStateHandler(mApplication, mExecutor));
     }
     void operator() (td::td_api::updateNewMessage& object) PRINT
     void operator() (td::td_api::updateMessageSendAcknowledged& object) PRINT
@@ -1014,18 +1031,31 @@ struct ResponseHandler {
     void operator() (td::td_api::webPage& object) PRINT
     void operator() (td::td_api::webPageInstantView& object) PRINT
 
+    std::shared_ptr<QueuedExecutor> mExecutor;
     wxApp* mApplication;
 };
 
-//void operator() (td::td_api::updateAuthorizationState& object) const {
-//    std::cout << __PRETTY_FUNCTION__ << std::endl;
-//    td::td_api::downcast_call(*object.authorization_state_, AuthorizationStateHandler());
-//}
+class ReceiveAndHandleResponseTask final: public ITask {
+public:
+    ReceiveAndHandleResponseTask(const std::shared_ptr<td::ClientManager> clientManager,
+                                 std::unique_ptr<ResponseHandler>&& responseHandler):
+        mClientManager(clientManager), mHandler(std::move(responseHandler)) {}
+    TaskExecutionResult execute() override {
+        auto response = clientManager->receive(0);
+        if(response.object) {
+            std::cout << "response request id: " << response.request_id << std::endl;
+            td::td_api::downcast_call(*response.object, *mHandler);
+        }
+        return TaskExecutionResult::Resubmit;
+    }
+    std::shared_ptr<td::ClientManager> mClientManager;
+    std::unique_ptr<ResponseHandler> mHandler;
+};
 
 void io_loop(wxApp* application) {
     std::cout << "hello" << std::endl;
     td::ClientManager::execute(td::td_api::make_object<td::td_api::setLogVerbosityLevel>(1));
-    clientManager = std::make_unique<td::ClientManager>();
+    clientManager = std::make_shared<td::ClientManager>();
     clientId = clientManager->create_client_id();
 
     std::cout << "client id: " << clientId << std::endl;
@@ -1033,12 +1063,10 @@ void io_loop(wxApp* application) {
     requestId++;
     std::cout << "sending request: " << requestId << std::endl;
     clientManager->send(clientId, requestId, td::td_api::make_object<td::td_api::getOption>("version"));
-    
+
+    auto executor = std::make_shared<QueuedExecutor>();
+    executor->submit(std::make_shared<ReceiveAndHandleResponseTask>(clientManager, std::make_unique<ResponseHandler>(application, executor)));
     while(true) {
-        auto response = clientManager->receive(1);
-        if(response.object) {
-            std::cout << "response request id: " << response.request_id << std::endl;
-            td::td_api::downcast_call(*response.object, ResponseHandler(application));
-        }
+        std::this_thread::yield();
     }
 }
