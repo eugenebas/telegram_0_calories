@@ -19,7 +19,5 @@ private:
 wxDECLARE_EVENT(TZC_SHOW_LOGIN_WINDOW_EVENT, ShowLoginWindowEvent);
 
 #define ShowLoginWindowEventHandler(func) (&func)
-//#define TZC_EVENT_SHOW_LOGIN_WINDOWS(id, func) \
-//    wx__DECLARE_EVT1(TZC_SHOW_LOGIN_WINDOW_EVENT, id, ShowLoginWindowEventHandler(func))
 
 #endif // __TZC_SHOW_LOGIN_WINDOW_EVENT_HPP__

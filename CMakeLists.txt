@@ -23,7 +23,23 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_executable(${CMAKE_PROJECT_NAME} main.cpp login_window.hpp login_window.cpp pass_code_window.hpp pass_code_window.cpp password_window.hpp password_window.cpp tg_io.cpp tg_io.hpp show_login_window_event.hpp show_login_window_event.cpp queued_executor.cpp queued_executor.hpp)
+set(HEADERS login_window.hpp
+            pass_code_window.hpp
+            password_window.hpp
+            tg_io.hpp
+            show_login_window_event.hpp
+            show_pass_code_window_event.hpp
+            queued_executor.hpp)
+set(SOURCES main.cpp
+            login_window.cpp
+            pass_code_window.cpp
+            password_window.cpp
+            tg_io.cpp
+            show_login_window_event.cpp
+            show_pass_code_window_event.cpp
+            queued_executor.cpp)
+
+add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 add_compile_definitions(${wxWidgets_DEFINITIONS})
 include_directories(${wxWidgets_INCLUDE_DIRS})

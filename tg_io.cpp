@@ -4,6 +4,7 @@
 #include <memory>
 #include <wx/wx.h>
 #include "show_login_window_event.hpp"
+#include "show_pass_code_window_event.hpp"
 #include "queued_executor.hpp"
 
 template <typename FutureResult>
@@ -20,6 +21,7 @@ public:
         } catch(...) {
             std::cerr << "Failed to handle future" << std::endl;
         }
+        return TaskExecutionResult::Done;
     }
 private:
     std::future<FutureResult> mFuture;
@@ -62,7 +64,17 @@ struct AuthorizationStateHandler {
             clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(login, nullptr));
         }));
     }
-    void operator() (td::td_api::authorizationStateWaitCode& state) PRINT
+    void operator() (td::td_api::authorizationStateWaitCode& state) const {
+        {std::cout << __PRETTY_FUNCTION__ << std::endl;}
+        std::shared_ptr<std::promise<std::string>> passCodePromise = std::make_shared<std::promise<std::string>>();
+        std::future<std::string> passCodeFuture = passCodePromise->get_future();
+        mApplication->QueueEvent(new ShowPassCodeWindowEvent(passCodePromise));
+        mExecutor->submit(std::make_shared<AwaitFutureTask<std::string>>(std::move(passCodeFuture), [&clientManager, &clientId, &requestId](std::string&& futureResult){
+            std::string passCode(std::move(futureResult));
+            std::cout << "pass code: " << passCode << std::endl;
+            clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::checkAuthenticationCode>(passCode));
+        }));
+    }
     void operator() (td::td_api::authorizationStateWaitOtherDeviceConfirmation& state) PRINT
     void operator() (td::td_api::authorizationStateWaitRegistration& state) PRINT
     void operator() (td::td_api::authorizationStateWaitPassword& state) PRINT
