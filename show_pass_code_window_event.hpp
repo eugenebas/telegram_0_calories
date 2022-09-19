@@ -8,7 +8,7 @@
 
 class ShowPassCodeWindowEvent: public wxEvent {
 public:
-    ShowPassCodeWindowEvent(std::shared_ptr<std::promise<std::string>> loginPassCodePromise);
+    ShowPassCodeWindowEvent(std::shared_ptr<std::promise<std::string>> passCodePromise);
     ShowPassCodeWindowEvent(const ShowPassCodeWindowEvent&);
     ShowPassCodeWindowEvent(ShowPassCodeWindowEvent&&) = default;
     wxEvent* Clone() const override;

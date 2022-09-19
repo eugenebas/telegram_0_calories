@@ -5,6 +5,7 @@
 #include <wx/wx.h>
 #include "show_login_window_event.hpp"
 #include "show_pass_code_window_event.hpp"
+#include "show_password_window_event.hpp"
 #include "queued_executor.hpp"
 
 template <typename FutureResult>
@@ -77,7 +78,17 @@ struct AuthorizationStateHandler {
     }
     void operator() (td::td_api::authorizationStateWaitOtherDeviceConfirmation& state) PRINT
     void operator() (td::td_api::authorizationStateWaitRegistration& state) PRINT
-    void operator() (td::td_api::authorizationStateWaitPassword& state) PRINT
+    void operator() (td::td_api::authorizationStateWaitPassword& state) const {
+        {std::cout << __PRETTY_FUNCTION__ << std::endl;}
+        std::shared_ptr<std::promise<std::string>> passwordPromise = std::make_shared<std::promise<std::string>>();
+        std::future<std::string> passwordFuture = passwordPromise->get_future();
+        mApplication->QueueEvent(new ShowPasswordWindowEvent(passwordPromise));
+        mExecutor->submit(std::make_shared<AwaitFutureTask<std::string>>(std::move(passwordFuture), [&clientManager, &clientId, &requestId](std::string&& futureResult){
+            std::string password(std::move(futureResult));
+            std::cout << "password: " << password << std::endl;
+            clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::checkAuthenticationPassword>(password));
+        }));
+    }
     void operator() (td::td_api::authorizationStateReady& state) PRINT
     void operator() (td::td_api::authorizationStateLoggingOut& state) PRINT
     void operator() (td::td_api::authorizationStateClosing& state) PRINT

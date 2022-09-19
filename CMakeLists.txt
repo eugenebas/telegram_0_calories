@@ -28,6 +28,7 @@ set(HEADERS login_window.hpp
             password_window.hpp
             tg_io.hpp
             show_login_window_event.hpp
+            show_password_window_event.hpp
             show_pass_code_window_event.hpp
             queued_executor.hpp)
 set(SOURCES main.cpp
@@ -36,6 +37,7 @@ set(SOURCES main.cpp
             password_window.cpp
             tg_io.cpp
             show_login_window_event.cpp
+            show_password_window_event.cpp
             show_pass_code_window_event.cpp
             queued_executor.cpp)
 

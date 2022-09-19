@@ -4,7 +4,9 @@
 #include "login_window.hpp"
 #include "show_login_window_event.hpp"
 #include "show_pass_code_window_event.hpp"
+#include "show_password_window_event.hpp"
 #include "pass_code_window.hpp"
+#include "password_window.hpp"
 #include "password_window.hpp"
 #include <thread>
 #include "tg_io.hpp"
@@ -22,6 +24,7 @@ public:
     MyApplication(): wxApp() {
         Bind(TZC_SHOW_LOGIN_WINDOW_EVENT, &MyApplication::OnShowLoginWindow, this);
         Bind(TZC_SHOW_PASS_CODE_WINDOW_EVENT, &MyApplication::OnShowPassCodeWindow, this);
+        Bind(TZC_SHOW_PASSWORD_WINDOW_EVENT, &MyApplication::OnShowPasswordWindow, this);
     }
     void OnShowLoginWindow(ShowLoginWindowEvent& event) {
         std::cout << "OnShowLoginWindow" << std::endl;
@@ -40,6 +43,16 @@ public:
             passCodePromise->set_value(PassCodeWindow::GetPassCode());
         } catch(const std::domain_error&) {
             passCodePromise->set_exception(std::current_exception());
+        }
+    }
+
+    void OnShowPasswordWindow(ShowPasswordWindowEvent& event) {
+        std::cout << "OnShowPasswordWindow" << std::endl;
+        auto passwordPromise = event.getPasswordPromise();
+        try {
+            passwordPromise->set_value(PasswordWindow::GetPassword());
+        } catch(const std::domain_error&) {
+            passwordPromise->set_exception(std::current_exception());
         }
     }
 
