@@ -5,9 +5,11 @@
 #include "show_login_window_event.hpp"
 #include "show_pass_code_window_event.hpp"
 #include "show_password_window_event.hpp"
+#include "show_main_window_event.hpp"
 #include "pass_code_window.hpp"
 #include "password_window.hpp"
 #include "password_window.hpp"
+#include "main_window.hpp"
 #include <thread>
 #include "tg_io.hpp"
 
@@ -20,12 +22,15 @@ private:
 
 class MyApplication final: public wxApp {
 public:
-    LoginWindow* mLoginWindow;
+    MainWindow* mMainWindow{nullptr};
+
     MyApplication(): wxApp() {
         Bind(TZC_SHOW_LOGIN_WINDOW_EVENT, &MyApplication::OnShowLoginWindow, this);
         Bind(TZC_SHOW_PASS_CODE_WINDOW_EVENT, &MyApplication::OnShowPassCodeWindow, this);
         Bind(TZC_SHOW_PASSWORD_WINDOW_EVENT, &MyApplication::OnShowPasswordWindow, this);
+        Bind(TZC_SHOW_MAIN_WINDOW_EVENT, &MyApplication::OnShowMainWindow, this);
     }
+
     void OnShowLoginWindow(ShowLoginWindowEvent& event) {
         std::cout << "OnShowLoginWindow" << std::endl;
         auto loginPromise = event.getLoginPromise();
@@ -56,17 +61,20 @@ public:
         }
     }
 
-    bool OnInit() override {
+    void OnShowMainWindow(ShowMainWindowEvent&) {
+        std::cout << "OnShowMainWindow" << std::endl;
+        mMainWindow = new MainWindow();
+        mMainWindow->Show();
+    }
 
+    bool OnInit() override {
         mIOThread = std::thread(io_loop, this);
         mIOThread.detach();
-        std::cout << "Hello World!" << std::endl;
-//        wxClose(false);
         SetExitOnFrameDelete(false);
         return true;
     }
+
     int OnExit() override {
-        std::cout << "Goodbye world!" << std::endl;
         return 0;
     }
 

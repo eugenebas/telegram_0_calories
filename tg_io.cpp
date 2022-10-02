@@ -6,6 +6,7 @@
 #include "show_login_window_event.hpp"
 #include "show_pass_code_window_event.hpp"
 #include "show_password_window_event.hpp"
+#include "show_main_window_event.hpp"
 #include "queued_executor.hpp"
 
 template <typename FutureResult>
@@ -89,7 +90,10 @@ struct AuthorizationStateHandler {
             clientManager->send(clientId, ++requestId, td::td_api::make_object<td::td_api::checkAuthenticationPassword>(password));
         }));
     }
-    void operator() (td::td_api::authorizationStateReady& state) PRINT
+    void operator() (td::td_api::authorizationStateReady& state) const {
+        {std::cout << __PRETTY_FUNCTION__ << std::endl;}
+        mApplication->QueueEvent(new ShowMainWindowEvent());
+    }
     void operator() (td::td_api::authorizationStateLoggingOut& state) PRINT
     void operator() (td::td_api::authorizationStateClosing& state) PRINT
     void operator() (td::td_api::authorizationStateClosed& state) PRINT
