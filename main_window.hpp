@@ -7,7 +7,6 @@
 class MainWindow final: public wxFrame {
 public:
     MainWindow();
-    void init();
 private:
     wxBoxSizer* mSizer;
     wxSplitterWindow* mSplitterWindow;

@@ -32,7 +32,9 @@ set(HEADERS login_window.hpp
             show_pass_code_window_event.hpp
             queued_executor.hpp
             main_window.hpp
-            show_main_window_event.hpp)
+            show_main_window_event.hpp
+            dialogs_panel.hpp
+            dialog_panel.hpp)
 set(SOURCES main.cpp
             login_window.cpp
             pass_code_window.cpp
@@ -43,7 +45,9 @@ set(SOURCES main.cpp
             show_pass_code_window_event.cpp
             queued_executor.cpp
             main_window.cpp
-            show_main_window_event.cpp)
+            show_main_window_event.cpp
+            dialogs_panel.cpp
+            dialog_panel.cpp)
 
 add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES})
 set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CXX_STANDARD 20)
