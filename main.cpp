@@ -64,7 +64,10 @@ public:
     void OnShowMainWindow(ShowMainWindowEvent&) {
         std::cout << "OnShowMainWindow" << std::endl;
         mMainWindow = new MainWindow();
+        mMainWindow->init();
         mMainWindow->Show();
+        mMainWindow->Layout();
+        mMainWindow->Update();
     }
 
     bool OnInit() override {
